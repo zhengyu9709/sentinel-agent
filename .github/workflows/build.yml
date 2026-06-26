@@ -1,0 +1,43 @@
+name: Build Sentinel Agent
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Build Windows
+        run: |
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H windowsgui" -o sentinel-agent-windows.exe .
+
+      - name: Build Mac ARM
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o sentinel-arm .
+
+      - name: Build Mac Intel
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o sentinel-intel .
+
+      - name: Merge Mac Universal
+        run: |
+          lipo -create sentinel-arm sentinel-intel -output sentinel-agent-mac
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            sentinel-agent-windows.exe
+            sentinel-agent-mac
