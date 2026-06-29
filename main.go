@@ -360,8 +360,8 @@ func main() {
 	// 注册路由
 	http.HandleFunc("/api/device", deviceHandler)
 
-	fmt.Printf("安全助手已成功启动 -> http://127.0.0.1%s\n", ListenPort)
-	fmt.Printf("当前已放行的域名白名单: %s\n", strings.Join(AllowedOrigins, ", "))
+	// fmt.Printf("安全助手已成功启动 -> http://127.0.0.1%s\n", ListenPort)
+	// fmt.Printf("当前已放行的域名白名单: %s\n", strings.Join(AllowedOrigins, ", "))
 
 	// 【核心优化 2】使用刚才创建好的 listener 启动服务
 	err = http.Serve(listener, nil)

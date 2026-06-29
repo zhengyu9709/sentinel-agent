@@ -5,39 +5,93 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  build-windows:
+    name: Build Windows
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+          cache: true
+
+      - name: Download dependencies
+        run: go mod tidy
 
       - name: Build Windows
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: 0
         run: |
-          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H windowsgui" -o sentinel-agent-windows.exe .
+          go build \
+            -ldflags="-s -w -H windowsgui" \
+            -o sentinel-agent-windows.exe .
 
-      - name: Build Mac ARM
-        run: |
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o sentinel-arm .
-
-      - name: Build Mac Intel
-        run: |
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o sentinel-intel .
-
-      - name: Merge Mac Universal
-        run: |
-          lipo -create sentinel-arm sentinel-intel -output sentinel-agent-mac
-
-      - name: Upload artifacts
+      - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release
-          path: |
-            sentinel-agent-windows.exe
-            sentinel-agent-mac
+          name: sentinel-agent-windows
+          path: sentinel-agent-windows.exe
+
+  build-macos:
+    name: Build macOS Universal
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: true
+
+      - name: Download dependencies
+        run: go mod tidy
+
+      - name: Build Intel
+        env:
+          GOOS: darwin
+          GOARCH: amd64
+          CGO_ENABLED: 0
+        run: |
+          go build \
+            -ldflags="-s -w" \
+            -o sentinel-intel .
+
+      - name: Build Apple Silicon
+        env:
+          GOOS: darwin
+          GOARCH: arm64
+          CGO_ENABLED: 0
+        run: |
+          go build \
+            -ldflags="-s -w" \
+            -o sentinel-arm .
+
+      - name: Create Universal Binary
+        run: |
+          lipo -create \
+            sentinel-intel \
+            sentinel-arm \
+            -output sentinel-agent-mac
+
+      - name: Verify Universal Binary
+        run: |
+          lipo -info sentinel-agent-mac
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-agent-mac
+          path: sentinel-agent-mac
